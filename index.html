@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fantasy Store — Draw</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root {
+    --bg: #f5f0eb;
+    --surface: #ffffff;
+    --ink: #1a1a2e;
+    --accent: #e63946;
+    --accent2: #457b9d;
+    --muted: #8d8d8d;
+    --border: #ddd8d0;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
+
+  /* ===== NAV ===== */
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 24px;
+    background: var(--surface);
+    border-bottom: 2px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,.06);
+  }
+  .logo {
+    font-family: 'Caveat', cursive; font-size: 1.8rem; font-weight: 700;
+    color: var(--ink); display: flex; align-items: center; gap: 8px;
+  }
+  .logo span { color: var(--accent); }
+
+  .nav-right { display: flex; align-items: center; gap: 10px; }
+
+  .btn-draw {
+    background: var(--accent); color: #fff; border: none;
+    padding: 10px 22px; border-radius: 50px;
+    font-family: 'Nunito', sans-serif; font-weight: 700; font-size: .95rem;
+    cursor: pointer; display: flex; align-items: center; gap: 6px;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .btn-draw:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(230,57,70,.35); }
+  .btn-draw:disabled { background: #ccc; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .user-chip {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg); border: 2px solid var(--border);
+    border-radius: 50px; padding: 5px 12px 5px 5px;
+    cursor: pointer; transition: background .15s;
+  }
+  .user-chip:hover { background: #ece8e2; }
+  .user-chip img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
+  .user-chip-name { font-size: .82rem; font-weight: 700; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .btn-google {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface); border: 2px solid var(--border);
+    border-radius: 50px; padding: 8px 16px;
+    font-family: 'Nunito', sans-serif; font-weight: 700; font-size: .88rem;
+    cursor: pointer; transition: box-shadow .15s, background .15s;
+  }
+  .btn-google:hover { box-shadow: 0 4px 14px rgba(0,0,0,.12); background: #f9f9f9; }
+  .btn-google svg { width: 18px; height: 18px; }
+
+  /* ===== FEED ===== */
+  main { max-width: 520px; margin: 0 auto; padding: 20px 16px 80px; }
+
+  .feed-card {
+    background: var(--surface); border-radius: var(--radius);
+    border: 2px solid var(--border); margin-bottom: 20px;
+    overflow: hidden; animation: cardIn .4s ease both;
+    transition: box-shadow .2s;
+  }
+  .feed-card:hover { box-shadow: 0 8px 28px rgba(0,0,0,.1); }
+
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-img-wrap { background: #fafafa; border-bottom: 2px solid var(--border); }
+  .card-img-wrap img { width: 100%; display: block; border-radius: 0; }
+
+  .card-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px;
+  }
+  .card-user { display: flex; align-items: center; gap: 8px; }
+  .avatar {
+    width: 34px; height: 34px; border-radius: 50%;
+    overflow: hidden; background: #ddd;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: .85rem; color: #fff; flex-shrink: 0;
+  }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .card-username { font-weight: 700; font-size: .9rem; }
+  .card-time { font-size: .78rem; color: var(--muted); }
+
+  .card-actions { display: flex; gap: 10px; }
+  .action-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: .85rem; color: var(--muted);
+    display: flex; align-items: center; gap: 4px;
+    padding: 4px 8px; border-radius: 8px;
+    transition: background .15s, color .15s;
+    font-family: 'Nunito', sans-serif; font-weight: 700;
+  }
+  .action-btn:hover { background: #f0eee9; color: var(--accent); }
+  .action-btn.liked { color: var(--accent); }
+
+  .empty {
+    text-align: center; padding: 60px 0; color: var(--muted);
+    font-family: 'Caveat', cursive; font-size: 1.3rem;
+  }
+  .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+
+  /* ===== MODAL BASE ===== */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.55); z-index: 200;
+    align-items: center; justify-content: center; padding: 12px;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface); border-radius: 20px;
+    width: 100%; max-width: 480px;
+    border: 2px solid var(--border); overflow: hidden;
+    animation: modalIn .25s ease;
+    box-shadow: 0 20px 60px rgba(0,0,0,.25);
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(.93); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px; border-bottom: 2px solid var(--border);
+  }
+  .modal-title { font-family: 'Caveat', cursive; font-size: 1.4rem; font-weight: 700; }
+  .close-btn {
+    background: none; border: none; font-size: 1.4rem;
+    cursor: pointer; color: var(--muted); line-height: 1;
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .close-btn:hover { background: #f0eee9; color: var(--ink); }
+
+  /* ===== GOOGLE LOGIN MODAL ===== */
+  #login-modal .modal { max-width: 380px; }
+  .login-body {
+    padding: 32px 28px; text-align: center;
+  }
+  .login-logo { font-family: 'Caveat', cursive; font-size: 2.2rem; font-weight: 700; margin-bottom: 6px; }
+  .login-logo span { color: var(--accent); }
+  .login-sub { color: var(--muted); font-size: .92rem; margin-bottom: 28px; }
+  .google-signin-btn {
+    width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px;
+    background: #fff; border: 2px solid #dadce0; border-radius: 50px;
+    padding: 12px 20px; font-family: 'Nunito', sans-serif; font-weight: 700;
+    font-size: 1rem; cursor: pointer; transition: box-shadow .2s, background .15s;
+    color: #3c4043;
+  }
+  .google-signin-btn:hover { box-shadow: 0 4px 18px rgba(0,0,0,.15); background: #f8f8f8; }
+  .google-signin-btn svg { width: 22px; height: 22px; }
+  .login-note { margin-top: 16px; font-size: .78rem; color: var(--muted); }
+
+  /* Google account picker simulation */
+  #account-picker { max-width: 360px; }
+  #account-picker .modal-header { background: #fff; }
+  .accounts-list { padding: 8px 0; }
+  .account-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 20px; cursor: pointer;
+    transition: background .12s;
+  }
+  .account-item:hover { background: #f1f3f4; }
+  .g-avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 1rem; color: #fff; flex-shrink: 0;
+  }
+  .g-name { font-weight: 700; font-size: .92rem; }
+  .g-email { font-size: .78rem; color: var(--muted); }
+  .add-account {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 20px; cursor: pointer;
+    border-top: 1px solid var(--border);
+    transition: background .12s;
+    color: var(--accent2); font-weight: 700; font-size: .9rem;
+  }
+  .add-account:hover { background: #f1f3f4; }
+  .picker-title { padding: 10px 20px; font-size: .8rem; color: var(--muted); border-bottom: 1px solid var(--border); }
+
+  /* ===== DRAW MODAL ===== */
+  .toolbar {
+    display: flex; align-items: center; gap: 6px;
+    padding: 10px 14px; border-bottom: 2px solid var(--border); flex-wrap: wrap;
+  }
+  .tool-btn {
+    background: none; border: 2px solid var(--border);
+    border-radius: 8px; width: 36px; height: 36px;
+    cursor: pointer; font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .12s, border-color .12s;
+  }
+  .tool-btn:hover, .tool-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .color-row { display: flex; gap: 6px; margin-left: 4px; }
+  .color-dot {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 3px solid transparent; cursor: pointer; transition: transform .12s;
+  }
+  .color-dot:hover { transform: scale(1.2); }
+  .color-dot.selected { border-color: var(--ink); }
+  .size-slider { margin-left: auto; width: 70px; accent-color: var(--accent); }
+
+  #draw-canvas { display: block; background: #fff; cursor: crosshair; touch-action: none; }
+
+  .modal-footer {
+    display: flex; gap: 8px; padding: 12px 14px;
+    border-top: 2px solid var(--border);
+  }
+  .btn-secondary {
+    flex: 1; background: none; border: 2px solid var(--border);
+    border-radius: 50px; padding: 10px;
+    font-family: 'Nunito', sans-serif; font-weight: 700; cursor: pointer;
+    transition: background .15s;
+  }
+  .btn-secondary:hover { background: #f0eee9; }
+  .btn-post {
+    flex: 2; background: var(--accent); color: #fff;
+    border: none; border-radius: 50px; padding: 10px;
+    font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 1rem;
+    cursor: pointer; transition: transform .15s, box-shadow .15s;
+  }
+  .btn-post:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(230,57,70,.35); }
+
+  /* already drew banner */
+  .drew-banner {
+    background: #fff8e1; border: 2px solid #ffe082;
+    border-radius: 12px; padding: 14px 18px;
+    margin-bottom: 20px; display: flex; gap: 10px;
+    align-items: flex-start; font-size: .9rem;
+  }
+  .drew-banner-icon { font-size: 1.4rem; }
+
+  /* ===== TOAST ===== */
+  .toast {
+    position: fixed; bottom: 28px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--ink); color: #fff; padding: 10px 20px;
+    border-radius: 50px; font-weight: 700; font-size: .85rem;
+    opacity: 0; transition: opacity .3s, transform .3s;
+    pointer-events: none; z-index: 500;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ===== LOGOUT MENU ===== */
+  .user-dropdown {
+    position: relative;
+  }
+  .dropdown-menu {
+    display: none; position: absolute; top: calc(100% + 8px); right: 0;
+    background: var(--surface); border: 2px solid var(--border);
+    border-radius: 12px; padding: 6px 0; min-width: 160px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.12); z-index: 300;
+  }
+  .dropdown-menu.open { display: block; }
+  .dropdown-item {
+    padding: 10px 16px; font-size: .88rem; font-weight: 700;
+    cursor: pointer; transition: background .12s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .dropdown-item:hover { background: #f0eee9; }
+  .dropdown-item.danger { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">🏰 Fantasy <span>Store</span></div>
+  <div class="nav-right">
+    <div id="nav-auth">
+      <!-- filled by JS -->
+    </div>
+  </div>
+</nav>
+
+<main id="feed">
+  <div class="empty" id="empty-state">
+    <div class="empty-icon">🎨</div>
+    Belum ada gambar. Jadilah yang pertama!
+  </div>
+</main>
+
+<!-- ===== LOGIN MODAL ===== -->
+<div class="modal-overlay" id="login-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Masuk</span>
+      <button class="close-btn" onclick="closeLoginModal()">✕</button>
+    </div>
+    <div class="login-body">
+      <div class="login-logo">🏰 Fantasy <span>Store</span></div>
+      <div class="login-sub">Masuk untuk mulai menggambar dan berbagi karyamu</div>
+
+      <!-- Google One Tap akan muncul otomatis jika CLIENT_ID sudah diset -->
+      <div id="g_id_onload"
+        data-client_id="584511391245-g1sus5smevfnrobn4mfvf64r7a8s02m9.apps.googleusercontent.com"
+        data-callback="handleGoogleCredential"
+        data-auto_prompt="false">
+      </div>
+
+      <!-- Tombol Google resmi -->
+      <div id="google-btn-container" style="display:flex;justify-content:center;margin-bottom:12px;"></div>
+
+      <!-- Fallback: tombol simulasi (aktif jika CLIENT_ID belum diset) -->
+      <div id="fallback-btn" style="display:none;">
+        <button class="google-signin-btn" onclick="showAccountPicker()">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+          Masuk dengan Google (Demo)
+        </button>
+        <div style="margin-top:10px;padding:10px 14px;background:#fff8e1;border:1px solid #ffe082;border-radius:8px;font-size:.78rem;color:#795548;">
+          ⚠️ <b>Client ID belum diset.</b> Buka file HTML, cari <code>GANTI_DENGAN_CLIENT_ID_KAMU</code> dan ganti dengan Client ID dari Google Cloud Console.
+        </div>
+      </div>
+
+      <div class="login-note">Setiap akun Google hanya bisa membuat 1 gambar</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ACCOUNT PICKER (simulasi Google) ===== -->
+<div class="modal-overlay" id="account-picker-modal">
+  <div class="modal" id="account-picker">
+    <div class="modal-header" style="background:#fff;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <svg width="22" height="22" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+        <span style="font-weight:700;font-size:.95rem;">Pilih akun</span>
+      </div>
+      <button class="close-btn" onclick="closeAccountPicker()">✕</button>
+    </div>
+    <div class="picker-title">untuk melanjutkan ke Fantasy Store</div>
+    <div class="accounts-list" id="accounts-list">
+      <!-- populated by JS -->
+    </div>
+    <div class="add-account" onclick="loginAsNewUser()">
+      <div style="width:40px;height:40px;border-radius:50%;background:#f1f3f4;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">➕</div>
+      <div>Gunakan akun lain</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ADD ACCOUNT FORM ===== -->
+<div class="modal-overlay" id="add-account-modal">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-header">
+      <span class="modal-title">Akun Baru</span>
+      <button class="close-btn" onclick="closeAddAccount()">✕</button>
+    </div>
+    <div style="padding:24px 20px;">
+      <div style="font-size:.88rem;color:var(--muted);margin-bottom:16px;">Masukkan nama & email untuk simulasi login Google</div>
+      <input id="new-name" placeholder="Nama lengkap" style="width:100%;border:2px solid var(--border);border-radius:8px;padding:10px 14px;font-family:'Nunito',sans-serif;font-size:.95rem;outline:none;margin-bottom:10px;">
+      <input id="new-email" placeholder="email@gmail.com" style="width:100%;border:2px solid var(--border);border-radius:8px;padding:10px 14px;font-family:'Nunito',sans-serif;font-size:.95rem;outline:none;margin-bottom:16px;">
+      <button onclick="confirmNewAccount()" style="width:100%;background:var(--accent2);color:#fff;border:none;border-radius:50px;padding:12px;font-family:'Nunito',sans-serif;font-weight:700;font-size:1rem;cursor:pointer;">Masuk</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DRAW MODAL ===== -->
+<div class="modal-overlay" id="draw-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">✏️ Buat Gambar</span>
+      <button class="close-btn" onclick="closeDrawModal()">✕</button>
+    </div>
+    <div class="toolbar">
+      <button class="tool-btn active" id="btn-pen" title="Pen" onclick="setTool('pen')">🖊️</button>
+      <button class="tool-btn" id="btn-eraser" title="Eraser" onclick="setTool('eraser')">🧹</button>
+      <div class="color-row" id="color-row"></div>
+      <input type="range" class="size-slider" id="size-slider" min="2" max="30" value="5">
+    </div>
+    <canvas id="draw-canvas" width="480" height="360"></canvas>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="clearCanvas()">🗑️ Bersihkan</button>
+      <button class="btn-post" onclick="postDrawing()">🚀 Bagikan</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== STATE =====
+let currentUser = null; // { name, email, color, photo }
+let drewUsers = {};     // email -> true (has drawn)
+const posts = [];
+
+// Simulated saved accounts (persists in memory per session)
+const savedAccounts = [
+  { name: 'Demo User', email: 'demo@gmail.com', color: '#457b9d' }
+];
+
+const COLORS = ['#1a1a2e','#e63946','#457b9d','#2a9d8f','#f4a261','#e9c46a','#8338ec','#ff6b6b'];
+const AVATAR_COLORS = ['#e63946','#457b9d','#2a9d8f','#f4a261','#8338ec','#6c63ff','#ff6b6b','#1a1a2e'];
+
+// ===== NAV =====
+function renderNav() {
+  const nav = document.getElementById('nav-auth');
+  if (!currentUser) {
+    nav.innerHTML = `<button class="btn-google" onclick="openLoginModal()">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="18" height="18">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Masuk
+    </button>
+    <button class="btn-draw" onclick="requireLoginToDraw()" style="margin-left:4px;">✏️ Gambar</button>`;
+  } else {
+    const hasDrew = drewUsers[currentUser.email];
+    nav.innerHTML = `
+      <div class="user-dropdown" id="user-dropdown">
+        <div class="user-chip" onclick="toggleDropdown()">
+          <div class="g-avatar" style="width:28px;height:28px;border-radius:50%;background:${currentUser.color};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.8rem;">${currentUser.name.charAt(0).toUpperCase()}</div>
+          <span class="user-chip-name">${currentUser.name.split(' ')[0]}</span>
+          <span style="font-size:.7rem;color:var(--muted);">▾</span>
+        </div>
+        <div class="dropdown-menu" id="dropdown-menu">
+          <div style="padding:10px 16px;border-bottom:1px solid var(--border);">
+            <div style="font-weight:700;font-size:.88rem;">${currentUser.name}</div>
+            <div style="font-size:.76rem;color:var(--muted);">${currentUser.email}</div>
+          </div>
+          <div class="dropdown-item danger" onclick="logout()">🚪 Keluar</div>
+        </div>
+      </div>
+      <button class="btn-draw" onclick="tryOpenDraw()" ${hasDrew ? 'disabled title="Kamu sudah menggambar sekali"' : ''}>
+        ${hasDrew ? '✅ Sudah Gambar' : '✏️ Gambar'}
+      </button>`;
+  }
+}
+
+function toggleDropdown() {
+  document.getElementById('dropdown-menu').classList.toggle('open');
+}
+document.addEventListener('click', e => {
+  const dd = document.getElementById('user-dropdown');
+  if (dd && !dd.contains(e.target)) {
+    const m = document.getElementById('dropdown-menu');
+    if (m) m.classList.remove('open');
+  }
+});
+
+// ===== LOGIN =====
+function openLoginModal() { document.getElementById('login-modal').classList.add('open'); }
+function closeLoginModal() { document.getElementById('login-modal').classList.remove('open'); }
+function requireLoginToDraw() { openLoginModal(); }
+
+function showAccountPicker() {
+  closeLoginModal();
+  const list = document.getElementById('accounts-list');
+  list.innerHTML = '';
+  savedAccounts.forEach(acc => {
+    const div = document.createElement('div');
+    div.className = 'account-item';
+    div.innerHTML = `
+      <div class="g-avatar" style="background:${acc.color}">${acc.name.charAt(0).toUpperCase()}</div>
+      <div>
+        <div class="g-name">${acc.name}</div>
+        <div class="g-email">${acc.email}</div>
+      </div>`;
+    div.onclick = () => loginAs(acc);
+    list.appendChild(div);
+  });
+  document.getElementById('account-picker-modal').classList.add('open');
+}
+
+function closeAccountPicker() { document.getElementById('account-picker-modal').classList.remove('open'); }
+
+function loginAs(acc) {
+  currentUser = { ...acc };
+  closeAccountPicker();
+  renderNav();
+  showToast(`Selamat datang, ${acc.name.split(' ')[0]}! 👋`);
+}
+
+function loginAsNewUser() {
+  closeAccountPicker();
+  document.getElementById('add-account-modal').classList.add('open');
+  document.getElementById('new-name').value = '';
+  document.getElementById('new-email').value = '';
+}
+function closeAddAccount() { document.getElementById('add-account-modal').classList.remove('open'); }
+
+function confirmNewAccount() {
+  const name = document.getElementById('new-name').value.trim();
+  const email = document.getElementById('new-email').value.trim();
+  if (!name || !email) { showToast('Nama dan email wajib diisi!'); return; }
+  if (!email.includes('@')) { showToast('Format email tidak valid'); return; }
+  const color = AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
+  const acc = { name, email, color };
+  // Add to saved accounts if not exists
+  if (!savedAccounts.find(a => a.email === email)) savedAccounts.push(acc);
+  closeAddAccount();
+  loginAs(acc);
+}
+
+function logout() {
+  currentUser = null;
+  renderNav();
+  showToast('Kamu telah keluar');
+}
+
+// ===== DRAW =====
+let currentColor = COLORS[0];
+let currentSize = 5;
+let currentTool = 'pen';
+let drawing = false;
+let lastX = 0, lastY = 0;
+
+// Build color dots
+const colorRow = document.getElementById('color-row');
+COLORS.forEach(c => {
+  const d = document.createElement('div');
+  d.className = 'color-dot' + (c === currentColor ? ' selected' : '');
+  d.style.background = c;
+  d.onclick = () => {
+    currentColor = c;
+    document.querySelectorAll('.color-dot').forEach(x => x.classList.remove('selected'));
+    d.classList.add('selected');
+    setTool('pen');
+  };
+  colorRow.appendChild(d);
+});
+document.getElementById('size-slider').oninput = e => currentSize = +e.target.value;
+
+const canvas = document.getElementById('draw-canvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const w = Math.min(canvas.parentElement.clientWidth || 480, 480);
+  canvas.width = w;
+  canvas.height = Math.round(w * 0.75);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function getPos(e) {
+  const r = canvas.getBoundingClientRect();
+  const src = e.touches ? e.touches[0] : e;
+  return [(src.clientX - r.left) * (canvas.width / r.width), (src.clientY - r.top) * (canvas.height / r.height)];
+}
+function startDraw(e) { e.preventDefault(); drawing = true; [lastX, lastY] = getPos(e); }
+function stopDraw() { drawing = false; ctx.beginPath(); }
+function doDraw(e) {
+  if (!drawing) return; e.preventDefault();
+  const [x, y] = getPos(e);
+  ctx.lineWidth = currentSize; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.strokeStyle = currentTool === 'eraser' ? '#ffffff' : currentColor;
+  ctx.globalCompositeOperation = currentTool === 'eraser' ? 'destination-out' : 'source-over';
+  ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(x, y); ctx.stroke();
+  [lastX, lastY] = [x, y];
+}
+canvas.addEventListener('mousedown', startDraw);
+canvas.addEventListener('mousemove', doDraw);
+canvas.addEventListener('mouseup', stopDraw);
+canvas.addEventListener('mouseleave', stopDraw);
+canvas.addEventListener('touchstart', startDraw, {passive:false});
+canvas.addEventListener('touchmove', doDraw, {passive:false});
+canvas.addEventListener('touchend', stopDraw);
+
+function setTool(t) {
+  currentTool = t;
+  document.getElementById('btn-pen').classList.toggle('active', t === 'pen');
+  document.getElementById('btn-eraser').classList.toggle('active', t === 'eraser');
+}
+
+function clearCanvas() {
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function tryOpenDraw() {
+  if (!currentUser) { openLoginModal(); return; }
+  if (drewUsers[currentUser.email]) {
+    showToast('Kamu sudah pernah menggambar sebelumnya ✅'); return;
+  }
+  resizeCanvas(); clearCanvas();
+  document.getElementById('draw-modal').classList.add('open');
+}
+function closeDrawModal() { document.getElementById('draw-modal').classList.remove('open'); }
+
+function postDrawing() {
+  if (!currentUser) return;
+  const dataUrl = canvas.toDataURL('image/png');
+  const post = {
+    id: Date.now(),
+    name: currentUser.name,
+    email: currentUser.email,
+    color: currentUser.color,
+    dataUrl, time: Date.now(),
+    likes: 0, liked: false
+  };
+  posts.unshift(post);
+  drewUsers[currentUser.email] = true;
+  closeDrawModal();
+  renderNav();
+  renderFeed();
+  showToast('Gambarmu berhasil dibagikan! 🎉');
+}
+
+// ===== FEED =====
+function timeAgo(ms) {
+  const s = Math.floor((Date.now() - ms) / 1000);
+  if (s < 60) return 'baru saja';
+  if (s < 3600) return Math.floor(s / 60) + ' menit lalu';
+  if (s < 86400) return Math.floor(s / 3600) + ' jam lalu';
+  return Math.floor(s / 86400) + ' hari lalu';
+}
+
+function renderFeed() {
+  const feed = document.getElementById('feed');
+  const empty = document.getElementById('empty-state');
+  feed.querySelectorAll('.feed-card, .drew-banner').forEach(c => c.remove());
+
+  if (currentUser && drewUsers[currentUser.email]) {
+    const banner = document.createElement('div');
+    banner.className = 'drew-banner';
+    banner.innerHTML = `<div class="drew-banner-icon">✅</div><div><b>Kamu sudah menggambar!</b><br><span style="font-size:.85rem;color:var(--muted);">Setiap akun hanya bisa membuat 1 gambar.</span></div>`;
+    feed.insertBefore(banner, empty);
+  }
+
+  if (posts.length === 0) { empty.style.display = ''; return; }
+  empty.style.display = 'none';
+
+  posts.forEach((p, i) => {
+    const card = document.createElement('div');
+    card.className = 'feed-card';
+    card.style.animationDelay = (i * 0.05) + 's';
+    card.innerHTML = `
+      <div class="card-img-wrap">
+        <img src="${p.dataUrl}" alt="drawing by ${p.name}">
+      </div>
+      <div class="card-footer">
+        <div class="card-user">
+          <div class="avatar">
+            <div style="width:100%;height:100%;background:${p.color};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;color:#fff;border-radius:50%;">${p.name.charAt(0).toUpperCase()}</div>
+          </div>
+          <div>
+            <div class="card-username">${p.name}</div>
+            <div class="card-time" data-time="${p.time}">${timeAgo(p.time)}</div>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="action-btn${p.liked ? ' liked' : ''}" onclick="toggleLike(${p.id})">
+            ${p.liked ? '❤️' : '🤍'} <span>${p.likes}</span>
+          </button>
+        </div>
+      </div>`;
+    feed.appendChild(card);
+  });
+}
+
+function toggleLike(id) {
+  const p = posts.find(x => x.id === id);
+  if (!p) return;
+  if (!currentUser) { openLoginModal(); return; }
+  p.liked = !p.liked;
+  p.likes += p.liked ? 1 : -1;
+  renderFeed();
+}
+
+setInterval(() => {
+  document.querySelectorAll('[data-time]').forEach(el => {
+    el.textContent = timeAgo(+el.dataset.time);
+  });
+}, 60000);
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ===== INIT =====
+const CLIENT_ID = '584511391245-g1sus5smevfnrobn4mfvf64r7a8s02m9.apps.googleusercontent.com';
+
+// Decode JWT from Google credential response
+function parseJwt(token) {
+  try {
+    return JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+  } catch(e) { return null; }
+}
+
+// Called by Google GIS after user selects account
+function handleGoogleCredential(response) {
+  const payload = parseJwt(response.credential);
+  if (!payload) { showToast('Login gagal, coba lagi'); return; }
+  const color = AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
+  const acc = {
+    name: payload.name,
+    email: payload.email,
+    photo: payload.picture || null,
+    color
+  };
+  closeLoginModal();
+  loginAs(acc);
+}
+
+function initGoogleGIS() {
+  const isRealClientId = CLIENT_ID && CLIENT_ID !== 'GANTI_DENGAN_CLIENT_ID_KAMU';
+  if (!isRealClientId) {
+    // Show fallback demo button
+    document.getElementById('google-btn-container').style.display = 'none';
+    document.getElementById('fallback-btn').style.display = 'block';
+    // Update onload element to remove client_id so it doesn't throw
+    const onload = document.getElementById('g_id_onload');
+    if (onload) onload.removeAttribute('data-client_id');
+    return;
+  }
+  // Real GIS init
+  if (typeof google === 'undefined') {
+    setTimeout(initGoogleGIS, 500); return;
+  }
+  google.accounts.id.initialize({
+    client_id: CLIENT_ID,
+    callback: handleGoogleCredential,
+    auto_select: false,
+  });
+  google.accounts.id.renderButton(
+    document.getElementById('google-btn-container'),
+    { theme: 'outline', size: 'large', width: 300, text: 'signin_with', shape: 'pill', logo_alignment: 'left' }
+  );
+}
+
+window.addEventListener('load', () => {
+  initGoogleGIS();
+  renderNav();
+  renderFeed();
+});
+</script>
+</body>
+</html>
